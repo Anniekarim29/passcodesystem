@@ -248,34 +248,40 @@ class _DialPainter extends CustomPainter {
 
     // ── Outer ring shadow ──────────────────────────────────────
     final shadowPaint = Paint()
-      ..color = (isDark ? Colors.black : Colors.black).withValues(alpha: isDark ? 0.4 : 0.08)
+      ..color = Colors.black.withValues(alpha: isDark ? 0.4 : 0.08)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-    canvas.drawCircle(center + const Offset(3, 3), outerRadius - 2, shadowPaint);
-
-    // Light shadow for neumorphic
-    final lightShadowPaint = Paint()
-      ..color = (isDark ? Colors.white : Colors.white).withValues(alpha: isDark ? 0.05 : 0.7)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    canvas.drawCircle(center + const Offset(-2, -2), outerRadius - 2, lightShadowPaint);
+    canvas.drawCircle(center + const Offset(4, 4), outerRadius, shadowPaint);
 
     // ── Outer ring fill ────────────────────────────────────────
     final outerPaint = Paint()
-      ..color = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE8E8ED)
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: isDark
+            ? [const Color(0xFF23252A), const Color(0xFF16181C)]
+            : [const Color(0xFFFFFFFF), const Color(0xFFE8EAF0)],
+      ).createShader(Rect.fromCircle(center: center, radius: outerRadius))
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, outerRadius, outerPaint);
 
-    // ── Outer ring border ──────────────────────────────────────
+    // ── Metallic border ────────────────────────────────────────
     final borderPaint = Paint()
-      ..color = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    canvas.drawCircle(center, outerRadius - 1, borderPaint);
-
-    // ── Inner track (where numbers sit) ────────────────────────
-    final trackPaint = Paint()
-      ..color = isDark ? const Color(0xFF3A3A3C) : const Color(0xFFD1D1D6)
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: isDark
+            ? [Colors.white.withValues(alpha: 0.15), Colors.black.withValues(alpha: 0.2)]
+            : [Colors.white, Colors.black.withValues(alpha: 0.1)],
+      ).createShader(Rect.fromCircle(center: center, radius: outerRadius))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
+    canvas.drawCircle(center, outerRadius - 1, borderPaint);
+
+    // ── Inner track glow ───────────────────────────────────────
+    final trackPaint = Paint()
+      ..color = isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.03)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
     canvas.drawCircle(center, numberRadius, trackPaint);
 
     // ── Finger stop indicator ──────────────────────────────────
@@ -285,9 +291,14 @@ class _DialPainter extends CustomPainter {
       center.dy + (outerRadius * 0.88) * sin(stopAngle),
     );
     final stopPaint = Paint()
-      ..color = isDark ? const Color(0xFF636366) : const Color(0xFFAEAEB2)
+      ..shader = RadialGradient(
+        colors: [
+          (isDark ? const Color(0xFF9BA2FF) : const Color(0xFF4A4E69)),
+          (isDark ? const Color(0xFF6C73FF) : const Color(0xFF2D3139)),
+        ],
+      ).createShader(Rect.fromCircle(center: stopPos, radius: numberCircleRadius * 0.4))
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(stopPos, numberCircleRadius * 0.4, stopPaint);
+    canvas.drawCircle(stopPos, numberCircleRadius * 0.35, stopPaint);
 
     // ── Number circles ─────────────────────────────────────────
     for (int i = 0; i < 10; i++) {
@@ -311,29 +322,48 @@ class _DialPainter extends CustomPainter {
 
       // Number circle shadow
       final numShadowPaint = Paint()
-        ..color = Colors.black.withValues(alpha: isDark ? 0.3 : 0.12)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-      canvas.drawCircle(numPos + const Offset(1, 2), effectiveRadius, numShadowPaint);
+        ..color = Colors.black.withValues(alpha: isDark ? 0.4 : 0.15)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+      canvas.drawCircle(numPos + const Offset(2, 3), effectiveRadius, numShadowPaint);
 
-      // Number circle fill
-      Color circleFillColor;
-      if (isHighlighted) {
-        circleFillColor = isDark ? const Color(0xFF48484A) : const Color(0xFF3A3A3C);
-      } else {
-        circleFillColor = isDark ? const Color(0xFF1C1C1E) : const Color(0xFF2C2C2E);
-      }
+      // Number circle fill (Glossy/Metallic)
       final numCirclePaint = Paint()
-        ..color = circleFillColor
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isHighlighted
+              ? [
+                  isDark ? const Color(0xFF9BA2FF) : const Color(0xFF4A4E69),
+                  isDark ? const Color(0xFF6C73FF) : const Color(0xFF2D3139),
+                ]
+              : [
+                  isDark ? const Color(0xFF2C2F36) : const Color(0xFFFFFFFF),
+                  isDark ? const Color(0xFF1A1C21) : const Color(0xFFE2E4EB),
+                ],
+        ).createShader(Rect.fromCircle(center: numPos, radius: effectiveRadius))
         ..style = PaintingStyle.fill;
       canvas.drawCircle(numPos, effectiveRadius, numCirclePaint);
+
+      // Glossy highlight (inner sheen)
+      final sheenPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withValues(alpha: isDark ? 0.1 : 0.6),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+        ).createShader(Rect.fromCircle(center: numPos, radius: effectiveRadius))
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(numPos, effectiveRadius, sheenPaint);
 
       // Number circle border
       final numBorderPaint = Paint()
         ..color = isHighlighted
-            ? (isDark ? Colors.white.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.5))
-            : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.15))
+            ? Colors.white.withValues(alpha: 0.4)
+            : Colors.black.withValues(alpha: 0.1)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1;
+        ..strokeWidth = 1.5;
       canvas.drawCircle(numPos, effectiveRadius, numBorderPaint);
 
       // Number text
@@ -343,9 +373,18 @@ class _DialPainter extends CustomPainter {
           style: TextStyle(
             color: isHighlighted
                 ? Colors.white
-                : (isDark ? const Color(0xFFD1D1D6) : const Color(0xFFE5E5EA)),
+                : (isDark ? const Color(0xFFF0F2F5) : const Color(0xFF1A1C2E)),
             fontSize: effectiveRadius * 0.95,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
+            shadows: isHighlighted
+                ? [
+                    const Shadow(
+                      color: Colors.black26,
+                      offset: Offset(0, 1),
+                      blurRadius: 2,
+                    )
+                  ]
+                : null,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -360,32 +399,46 @@ class _DialPainter extends CustomPainter {
       );
     }
 
-    // ── Center hub ─────────────────────────────────────────────
+    // ── Center hub (Glassmorphism effect) ──────────────────────
     // Hub shadow
     final hubShadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: isDark ? 0.5 : 0.1)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    canvas.drawCircle(center + const Offset(2, 2), centerHubRadius, hubShadowPaint);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    canvas.drawCircle(center + const Offset(3, 4), centerHubRadius, hubShadowPaint);
 
-    // Hub fill
+    // Hub glass fill
     final hubPaint = Paint()
-      ..color = isDark ? const Color(0xFF3A3A3C) : const Color(0xFFF2F2F7)
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withValues(alpha: isDark ? 0.08 : 0.4),
+          Colors.white.withValues(alpha: isDark ? 0.02 : 0.1),
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: centerHubRadius))
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, centerHubRadius, hubPaint);
 
-    // Hub border
+    // Hub border (Metallic)
     final hubBorderPaint = Paint()
-      ..color = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withValues(alpha: 0.3),
+          Colors.black.withValues(alpha: 0.1),
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: centerHubRadius))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..strokeWidth = 2;
     canvas.drawCircle(center, centerHubRadius, hubBorderPaint);
 
-    // Hub inner detail circle
-    final hubInnerPaint = Paint()
-      ..color = isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawCircle(center, centerHubRadius * 0.6, hubInnerPaint);
+    // Inner hub detail (glow)
+    final hubInnerGlow = Paint()
+      ..color = (isDark ? const Color(0xFF9BA2FF) : const Color(0xFF4A4E69))
+          .withValues(alpha: 0.05)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, centerHubRadius * 0.7, hubInnerGlow);
   }
 
   @override

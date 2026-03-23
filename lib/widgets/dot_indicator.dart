@@ -76,33 +76,39 @@ class _DotIndicatorState extends State<DotIndicator>
           } else if (isFilled) {
             dotColor = Theme.of(context).colorScheme.primary;
           } else {
-            dotColor = Theme.of(context).colorScheme.outline;
+            dotColor = isDark 
+                ? const Color(0xFF2D3139) 
+                : const Color(0xFFE2E4EB);
           }
 
           return AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutBack,
+            curve: Curves.elasticOut,
             margin: const EdgeInsets.symmetric(horizontal: 10),
-            width: isFilled ? 18 : 14,
-            height: isFilled ? 18 : 14,
+            width: isFilled ? 20 : 14,
+            height: isFilled ? 20 : 14,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isFilled ? dotColor : Colors.transparent,
               border: Border.all(
                 color: dotColor,
-                width: 2.5,
+                width: isFilled ? 3 : 2,
               ),
               boxShadow: isFilled
                   ? [
                       BoxShadow(
-                        color: dotColor.withValues(alpha: 0.4),
-                        blurRadius: 10,
-                        spreadRadius: 1,
+                        color: dotColor.withValues(alpha: 0.5),
+                        blurRadius: 15,
+                        spreadRadius: 2,
                       ),
+                      if (isSuccess)
+                        BoxShadow(
+                          color: dotColor.withValues(alpha: 0.3),
+                          blurRadius: 25,
+                          spreadRadius: 5,
+                        ),
                     ]
-                  : (isDark
-                      ? AppTheme.neumorphicDark(blur: 6, offset: 2)
-                      : AppTheme.neumorphicLight(blur: 6, offset: 2)),
+                  : null,
             ),
           );
         }),

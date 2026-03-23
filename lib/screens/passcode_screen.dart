@@ -57,6 +57,50 @@ class _PasscodeScreenState extends State<PasscodeScreen>
     return Scaffold(
       body: Stack(
         children: [
+          // ── Premium Gradient Background ─────────────────────
+          Positioned.fill(
+            child: AnimatedContainer(
+              duration: const Duration(seconds: 1),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [
+                          const Color(0xFF0F1115),
+                          const Color(0xFF1A1C22),
+                          const Color(0xFF121418),
+                        ]
+                      : [
+                          const Color(0xFFF0F2F8),
+                          const Color(0xFFE6E9F0),
+                          const Color(0xFFF8F9FF),
+                        ],
+                ),
+              ),
+            ),
+          ),
+          
+          // Subtle accent glows
+          Positioned(
+            top: -size.width * 0.2,
+            right: -size.width * 0.1,
+            child: Container(
+              width: size.width * 0.8,
+              height: size.width * 0.8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    (isDark ? const Color(0xFF333750) : const Color(0xFFD0D6E8))
+                        .withValues(alpha: 0.3),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // ── Main content ────────────────────────────────────
           SafeArea(
             child: Column(
@@ -80,7 +124,15 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                 // ─ Title ─────────────────────────────────────
                 Text(
                   'Enter Passcode',
-                  style: Theme.of(context).textTheme.headlineLarge,
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
                 ),
 
                 SizedBox(height: size.height * 0.01),
@@ -93,6 +145,7 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                     key: ValueKey(provider.status),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: _getSubtitleColor(provider.status, isDark),
+                          letterSpacing: 0.2,
                         ),
                   ),
                 ),
@@ -102,7 +155,7 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                 // ─ Dot indicators ────────────────────────────
                 const DotIndicator(),
 
-                SizedBox(height: size.height * 0.04),
+                SizedBox(height: size.height * 0.06),
 
                 // ─ Rotary dial ────────────────────────────────
                 Expanded(
@@ -114,14 +167,14 @@ class _PasscodeScreenState extends State<PasscodeScreen>
 
                 // ─ Bottom actions ─────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 30, top: 8),
+                  padding: const EdgeInsets.only(bottom: 30, top: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Clear button
                       _buildActionButton(
                         context: context,
-                        icon: Icons.backspace_outlined,
+                        icon: Icons.backspace_rounded,
                         label: 'Delete',
                         onTap: () => provider.deleteLast(),
                         isDark: isDark,
@@ -153,17 +206,30 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                 child: IgnorePointer(
                   child: Container(
                     color: AppTheme.successGreen
-                        .withValues(alpha: _successOverlayAnimation.value * 0.15),
+                        .withValues(alpha: _successOverlayAnimation.value * 0.1),
                     child: Center(
                       child: Opacity(
                         opacity: _successOverlayAnimation.value,
                         child: Transform.scale(
-                          scale: 0.8 + _successOverlayAnimation.value * 0.2,
-                          child: Icon(
-                            Icons.check_circle_rounded,
-                            size: 80,
-                            color: AppTheme.successGreen
-                                .withValues(alpha: _successOverlayAnimation.value * 0.7),
+                          scale: 0.7 + _successOverlayAnimation.value * 0.3,
+                          child: Container(
+                            padding: const EdgeInsets.all(30),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: isDark ? 0.05 : 0.8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.successGreen.withValues(alpha: 0.3),
+                                  blurRadius: 40,
+                                  spreadRadius: 10,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.check_circle_rounded,
+                              size: 100,
+                              color: AppTheme.successGreen,
+                            ),
                           ),
                         ),
                       ),
