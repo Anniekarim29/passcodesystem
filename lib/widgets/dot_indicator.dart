@@ -23,12 +23,12 @@ class _DotIndicatorState extends State<DotIndicator>
       duration: const Duration(milliseconds: 500),
     );
     _shakeAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: 10), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: 10, end: -10), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -10, end: 8), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 8, end: -6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -6, end: 3), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 3, end: 0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 10.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 8.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 8.0, end: -6.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -6.0, end: 3.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 3.0, end: 0.0), weight: 1),
     ]).animate(CurvedAnimation(
       parent: _shakeController,
       curve: Curves.easeOut,
@@ -46,7 +46,6 @@ class _DotIndicatorState extends State<DotIndicator>
     final provider = context.watch<PasscodeProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Trigger shake on error (after build)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (provider.status == PasscodeStatus.error && !_shakeController.isAnimating) {
         _shakeController.forward(from: 0);
@@ -74,38 +73,62 @@ class _DotIndicatorState extends State<DotIndicator>
           } else if (isError) {
             dotColor = AppTheme.errorRed;
           } else if (isFilled) {
-            dotColor = Theme.of(context).colorScheme.primary;
+            dotColor = isDark ? const Color(0xFF8B8EFF) : const Color(0xFF5C5FE0);
           } else {
-            dotColor = isDark 
-                ? const Color(0xFF2D3139) 
-                : const Color(0xFFE2E4EB);
+            dotColor = isDark
+                ? const Color(0xFF252840)
+                : const Color(0xFFD0D2E8);
           }
 
           return AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            curve: Curves.elasticOut,
+            curve: Curves.easeOutCubic,
             margin: const EdgeInsets.symmetric(horizontal: 10),
             width: isFilled ? 20 : 14,
             height: isFilled ? 20 : 14,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isFilled ? dotColor : Colors.transparent,
+              // 3D gradient fill when filled
+              gradient: isFilled
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isSuccess
+                          ? [
+                              AppTheme.successGreen.withValues(alpha: 0.9),
+                              const Color(0xFF00A060),
+                            ]
+                          : isError
+                              ? [
+                                  AppTheme.errorRed.withValues(alpha: 0.9),
+                                  const Color(0xFFCC2020),
+                                ]
+                              : [
+                                  dotColor.withValues(alpha: 0.95),
+                                  dotColor.withValues(alpha: 0.7),
+                                ],
+                    )
+                  : null,
+              color: isFilled ? null : dotColor.withValues(alpha: 0.3),
               border: Border.all(
-                color: dotColor,
-                width: isFilled ? 3 : 2,
+                color: isFilled
+                    ? dotColor.withValues(alpha: 0.6)
+                    : dotColor.withValues(alpha: 0.5),
+                width: isFilled ? 0 : 1.5,
               ),
               boxShadow: isFilled
                   ? [
                       BoxShadow(
-                        color: dotColor.withValues(alpha: 0.5),
-                        blurRadius: 15,
-                        spreadRadius: 2,
+                        color: dotColor.withValues(alpha: 0.45),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 2),
                       ),
                       if (isSuccess)
                         BoxShadow(
-                          color: dotColor.withValues(alpha: 0.3),
-                          blurRadius: 25,
-                          spreadRadius: 5,
+                          color: AppTheme.successGreen.withValues(alpha: 0.25),
+                          blurRadius: 20,
+                          spreadRadius: 4,
                         ),
                     ]
                   : null,

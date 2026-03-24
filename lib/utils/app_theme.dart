@@ -2,21 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // ─── Light palette ──────────────────────────────────────────────
-  static const Color _lightBg = Color(0xFFF8F9FF);
+  // ─── Light palette (Deep blue-purple tones) ─────────────────────
+  static const Color _lightBg = Color(0xFFE8ECF4);
   static const Color _lightSurface = Color(0xFFFFFFFF);
-  static const Color _lightTextPrimary = Color(0xFF1A1C1E);
-  static const Color _lightTextSecondary = Color(0xFF6C7075);
-  static const Color _lightAccent = Color(0xFF4A4E69);
-  static const Color _lightDialRing = Color(0xFFE2E4EB);
+  static const Color _lightTextPrimary = Color(0xFF1B1D2A);
+  static const Color _lightTextSecondary = Color(0xFF6B6F82);
+  static const Color _lightAccent = Color(0xFF5C5FE0);
+  static const Color _lightDialRing = Color(0xFFD5D8E4);
 
-  // ─── Dark palette ──────────────────────────────────────────────
-  static const Color _darkBg = Color(0xFF0F1115);
-  static const Color _darkSurface = Color(0xFF1A1C22);
-  static const Color _darkTextPrimary = Color(0xFFF0F2F5);
-  static const Color _darkTextSecondary = Color(0xFF9EA4AD);
-  static const Color _darkAccent = Color(0xFF9BA2FF);
-  static const Color _darkDialRing = Color(0xFF2D3139);
+  // ─── Dark palette (Rich deep navy-purple) ───────────────────────
+  static const Color _darkBg = Color(0xFF0D0E1A);
+  static const Color _darkSurface = Color(0xFF151728);
+  static const Color _darkTextPrimary = Color(0xFFF2F3F8);
+  static const Color _darkTextSecondary = Color(0xFF8A8FA5);
+  static const Color _darkAccent = Color(0xFF8B8EFF);
+  static const Color _darkDialRing = Color(0xFF252840);
+
+  // ─── Gradient colors (Background mesh) ──────────────────────────
+  static const Color darkGradient1 = Color(0xFF0D0E1A);
+  static const Color darkGradient2 = Color(0xFF1A1040);
+  static const Color darkGradient3 = Color(0xFF0A1628);
+  static const Color darkGlow1 = Color(0xFF3D2B7A);
+  static const Color darkGlow2 = Color(0xFF1B3A5C);
+
+  static const Color lightGradient1 = Color(0xFFE8ECF4);
+  static const Color lightGradient2 = Color(0xFFD6DCED);
+  static const Color lightGradient3 = Color(0xFFEEEFF6);
+  static const Color lightGlow1 = Color(0xFFB8B6E8);
+  static const Color lightGlow2 = Color(0xFFA8C8E8);
 
   // ─── Feedback colours ──────────────────────────────────────────
   static const Color successGreen = Color(0xFF00D180);

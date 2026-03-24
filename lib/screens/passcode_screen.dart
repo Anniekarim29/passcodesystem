@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/passcode_provider.dart';
@@ -14,9 +15,10 @@ class PasscodeScreen extends StatefulWidget {
 }
 
 class _PasscodeScreenState extends State<PasscodeScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _successOverlayController;
   late Animation<double> _successOverlayAnimation;
+  late AnimationController _bgAnimController;
 
   @override
   void initState() {
@@ -33,11 +35,17 @@ class _PasscodeScreenState extends State<PasscodeScreen>
       parent: _successOverlayController,
       curve: Curves.easeInOut,
     ));
+
+    _bgAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
     _successOverlayController.dispose();
+    _bgAnimController.dispose();
     super.dispose();
   }
 
@@ -57,45 +65,87 @@ class _PasscodeScreenState extends State<PasscodeScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // ── Premium Gradient Background ─────────────────────
+          // ── Animated Premium Gradient Background ──────────────
           Positioned.fill(
-            child: AnimatedContainer(
-              duration: const Duration(seconds: 1),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: isDark
-                      ? [
-                          const Color(0xFF0F1115),
-                          const Color(0xFF1A1C22),
-                          const Color(0xFF121418),
-                        ]
-                      : [
-                          const Color(0xFFF0F2F8),
-                          const Color(0xFFE6E9F0),
-                          const Color(0xFFF8F9FF),
-                        ],
-                ),
-              ),
+            child: AnimatedBuilder(
+              animation: _bgAnimController,
+              builder: (context, _) {
+                return CustomPaint(
+                  painter: _MeshGradientPainter(
+                    isDark: isDark,
+                    animValue: _bgAnimController.value,
+                  ),
+                  size: size,
+                );
+              },
             ),
           ),
-          
-          // Subtle accent glows
-          Positioned(
-            top: -size.width * 0.2,
-            right: -size.width * 0.1,
-            child: Container(
-              width: size.width * 0.8,
-              height: size.width * 0.8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    (isDark ? const Color(0xFF333750) : const Color(0xFFD0D6E8))
-                        .withValues(alpha: 0.3),
-                    Colors.transparent,
-                  ],
+
+          // ── Floating orb glow 1 (top-right) ──────────────────
+          AnimatedBuilder(
+            animation: _bgAnimController,
+            builder: (context, _) {
+              final offset = sin(_bgAnimController.value * pi * 2) * 20;
+              return Positioned(
+                top: -size.width * 0.15 + offset,
+                right: -size.width * 0.05,
+                child: Container(
+                  width: size.width * 0.7,
+                  height: size.width * 0.7,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        (isDark ? AppTheme.darkGlow1 : AppTheme.lightGlow1)
+                            .withValues(alpha: 0.35),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // ── Floating orb glow 2 (bottom-left) ────────────────
+          AnimatedBuilder(
+            animation: _bgAnimController,
+            builder: (context, _) {
+              final offset = cos(_bgAnimController.value * pi * 2) * 25;
+              return Positioned(
+                bottom: -size.width * 0.2 + offset,
+                left: -size.width * 0.15,
+                child: Container(
+                  width: size.width * 0.65,
+                  height: size.width * 0.65,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        (isDark ? AppTheme.darkGlow2 : AppTheme.lightGlow2)
+                            .withValues(alpha: 0.3),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // subtle noise/grain overlay for premium feel
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      (isDark ? Colors.black : Colors.white).withValues(alpha: 0.05),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -122,16 +172,25 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                 SizedBox(height: size.height * 0.02),
 
                 // ─ Title ─────────────────────────────────────
-                Text(
-                  'Enter Passcode',
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-                        offset: const Offset(0, 2),
-                        blurRadius: 4,
-                      ),
-                    ],
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: isDark
+                        ? [const Color(0xFFE0E0FF), const Color(0xFF9BA2FF)]
+                        : [const Color(0xFF2A2D4E), const Color(0xFF5C5FE0)],
+                  ).createShader(bounds),
+                  child: Text(
+                    'Enter Passcode',
+                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          color: (isDark ? const Color(0xFF8B8EFF) : const Color(0xFF5C5FE0))
+                              .withValues(alpha: 0.3),
+                          offset: const Offset(0, 4),
+                          blurRadius: 12,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -145,7 +204,7 @@ class _PasscodeScreenState extends State<PasscodeScreen>
                     key: ValueKey(provider.status),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: _getSubtitleColor(provider.status, isDark),
-                          letterSpacing: 0.2,
+                          letterSpacing: 0.5,
                         ),
                   ),
                 ),
@@ -263,8 +322,8 @@ class _PasscodeScreenState extends State<PasscodeScreen>
         return AppTheme.errorRed;
       case PasscodeStatus.entering:
         return isDark
-            ? const Color(0xFF8E8E93)
-            : const Color(0xFF8E8E93);
+            ? const Color(0xFF8A8FA5)
+            : const Color(0xFF7A7E92);
     }
   }
 
@@ -279,12 +338,24 @@ class _PasscodeScreenState extends State<PasscodeScreen>
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04),
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.white.withValues(alpha: 0.6),
+          border: Border.all(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.06),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -293,23 +364,81 @@ class _PasscodeScreenState extends State<PasscodeScreen>
               icon,
               size: 18,
               color: isDark
-                  ? const Color(0xFF8E8E93)
-                  : const Color(0xFF636366),
+                  ? const Color(0xFF9BA0B5)
+                  : const Color(0xFF5A5E72),
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: isDark
-                    ? const Color(0xFF8E8E93)
-                    : const Color(0xFF636366),
+                    ? const Color(0xFF9BA0B5)
+                    : const Color(0xFF5A5E72),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Mesh gradient background painter
+// ═══════════════════════════════════════════════════════════════════
+class _MeshGradientPainter extends CustomPainter {
+  final bool isDark;
+  final double animValue;
+
+  _MeshGradientPainter({required this.isDark, required this.animValue});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Base gradient
+    final bgPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: isDark
+            ? [
+                AppTheme.darkGradient1,
+                AppTheme.darkGradient2,
+                AppTheme.darkGradient3,
+                AppTheme.darkGradient1,
+              ]
+            : [
+                AppTheme.lightGradient1,
+                AppTheme.lightGradient2,
+                AppTheme.lightGradient3,
+                AppTheme.lightGradient1,
+              ],
+        stops: const [0.0, 0.35, 0.7, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+
+    // Animated subtle radial glow in center
+    final centerGlow = Paint()
+      ..shader = RadialGradient(
+        center: Alignment(
+          0.0 + sin(animValue * pi * 2) * 0.2,
+          0.1 + cos(animValue * pi * 2) * 0.15,
+        ),
+        radius: 0.8,
+        colors: [
+          (isDark ? const Color(0xFF2A1860) : const Color(0xFFC8C4F0))
+              .withValues(alpha: 0.2),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), centerGlow);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MeshGradientPainter old) {
+    return old.animValue != animValue || old.isDark != isDark;
   }
 }

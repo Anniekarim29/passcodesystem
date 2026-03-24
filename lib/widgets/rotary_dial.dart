@@ -25,11 +25,7 @@ class _RotaryDialState extends State<RotaryDial> with TickerProviderStateMixin {
   late Animation<double> _returnAnimation;
   late Animation<double> _highlightAnimation;
 
-  // The finger-stop position (like on a real rotary dial)
-  static const double _fingerStopAngle = pi * 0.75; // ~135 degrees from start
-  
   // Number arrangement: 1-9 then 0, clockwise from top-right
-  // Like a real rotary phone
   static const List<int> _numberOrder = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
 
   @override
@@ -84,11 +80,9 @@ class _RotaryDialState extends State<RotaryDial> with TickerProviderStateMixin {
   // ─── Angle helpers ──────────────────────────────────────────────
 
   int? _getNumberAtAngle(double rotationAngle) {
-    if (rotationAngle < pi / 12) return null; // Dead zone at start
+    if (rotationAngle < pi / 12) return null;
 
-    // Each number is roughly 25-30 degrees apart on the dial
-    // We map the rotation amount to which hole was pulled to the stop
-    double stepAngle = (2 * pi * 0.8) / 10; 
+    double stepAngle = (2 * pi * 0.8) / 10;
     int steps = (rotationAngle / stepAngle).round();
     
     if (steps < 1) return null;
@@ -96,8 +90,6 @@ class _RotaryDialState extends State<RotaryDial> with TickerProviderStateMixin {
 
     return _numberOrder[steps - 1];
   }
-
-
 
   double _angleBetween(Offset center, Offset point) {
     return atan2(point.dy - center.dy, point.dx - center.dx);
@@ -109,7 +101,6 @@ class _RotaryDialState extends State<RotaryDial> with TickerProviderStateMixin {
     _inertiaController.stop();
     final center = Offset(dialSize / 2, dialSize / 2);
     _startAngle = _angleBetween(center, details.localPosition);
-
   }
 
   void _onPanUpdate(DragUpdateDetails details, double dialSize) {
@@ -117,43 +108,32 @@ class _RotaryDialState extends State<RotaryDial> with TickerProviderStateMixin {
     final currentTouchAngle = _angleBetween(center, details.localPosition);
     double delta = currentTouchAngle - _startAngle;
 
-    // Handle wrapping around -pi/pi boundary
     if (delta > pi) delta -= 2 * pi;
     if (delta < -pi) delta += 2 * pi;
 
-    // Only allow clockwise rotation (negative angle in standard math)
-    // but we'll treat clockwise drag as negative for our system
     setState(() {
       _currentAngle += delta;
-      // Clamp: only allow rotation in one direction (clockwise = positive here)
       if (_currentAngle < 0) _currentAngle = 0;
-      // Max rotation ~ 330 degrees
       if (_currentAngle > 2 * pi * 0.92) _currentAngle = 2 * pi * 0.92;
 
-
       _startAngle = currentTouchAngle;
-
-      // Determine highlighted number based on current rotation
       _highlightedNumber = _getNumberAtAngle(_currentAngle);
     });
   }
 
   void _onPanEnd(DragEndDetails details) {
-    // Determine which number was dialled
     final number = _getNumberAtAngle(_currentAngle);
 
     if (number != null) {
       _selectedNumber = number;
       _highlightController.forward(from: 0);
 
-      // Add digit to passcode
       final provider = Provider.of<PasscodeProvider>(context, listen: false);
       provider.addDigit(number);
     }
 
     _highlightedNumber = null;
 
-    // Animate return to zero (like a real rotary dial spring-back)
     _returnAnimation = Tween<double>(
       begin: _currentAngle,
       end: 0,
@@ -214,7 +194,7 @@ class _RotaryDialState extends State<RotaryDial> with TickerProviderStateMixin {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// CustomPainter for the entire dial
+// Premium 3D CustomPainter for the dial
 // ═══════════════════════════════════════════════════════════════════
 class _DialPainter extends CustomPainter {
   final bool isDark;
@@ -246,61 +226,140 @@ class _DialPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final outerRadius = size.width / 2;
 
-    // ── Outer ring shadow ──────────────────────────────────────
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: isDark ? 0.4 : 0.08)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-    canvas.drawCircle(center + const Offset(4, 4), outerRadius, shadowPaint);
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 1: Deep outer shadow (3D lift effect)
+    // ═══════════════════════════════════════════════════════════════
+    final deepShadow = Paint()
+      ..color = Colors.black.withValues(alpha: isDark ? 0.6 : 0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+    canvas.drawCircle(center + const Offset(6, 8), outerRadius, deepShadow);
 
-    // ── Outer ring fill ────────────────────────────────────────
-    final outerPaint = Paint()
+    // Secondary softer shadow
+    final softShadow = Paint()
+      ..color = Colors.black.withValues(alpha: isDark ? 0.3 : 0.08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40);
+    canvas.drawCircle(center + const Offset(3, 5), outerRadius + 5, softShadow);
+
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 2: Outer ring (metallic bezel)
+    // ═══════════════════════════════════════════════════════════════
+    // Outermost metallic bezel ring
+    final bezelPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: isDark
-            ? [const Color(0xFF23252A), const Color(0xFF16181C)]
-            : [const Color(0xFFFFFFFF), const Color(0xFFE8EAF0)],
+            ? [const Color(0xFF2A2D40), const Color(0xFF15172A), const Color(0xFF1E2035)]
+            : [const Color(0xFFF0F0F8), const Color(0xFFD8DAE8), const Color(0xFFE6E8F2)],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: outerRadius));
+    canvas.drawCircle(center, outerRadius, bezelPaint);
+
+    // Metallic top highlight on bezel
+    final bezelHighlight = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.center,
+        colors: [
+          Colors.white.withValues(alpha: isDark ? 0.12 : 0.6),
+          Colors.white.withValues(alpha: 0.0),
+        ],
       ).createShader(Rect.fromCircle(center: center, radius: outerRadius))
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, outerRadius, outerPaint);
+    // Draw half circle for top shine
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height / 2));
+    canvas.drawCircle(center, outerRadius - 1, bezelHighlight);
+    canvas.restore();
 
-    // ── Metallic border ────────────────────────────────────────
-    final borderPaint = Paint()
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 3: Inner dial face (recessed area)
+    // ═══════════════════════════════════════════════════════════════
+    final innerRadius = outerRadius * 0.92;
+
+    // Inner shadow (3D recess effect)
+    final innerShadow = Paint()
+      ..color = Colors.black.withValues(alpha: isDark ? 0.4 : 0.08)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(center + const Offset(0, 2), innerRadius, innerShadow);
+
+    // Inner face gradient
+    final innerFace = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.3, -0.3),
+        radius: 1.2,
+        colors: isDark
+            ? [const Color(0xFF1E2038), const Color(0xFF141628), const Color(0xFF0E1020)]
+            : [const Color(0xFFFFFFFF), const Color(0xFFECEDF6), const Color(0xFFE2E4F0)],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: innerRadius));
+    canvas.drawCircle(center, innerRadius, innerFace);
+
+    // Inner bezel ring (subtle inset border)
+    final innerBezel = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: isDark
-            ? [Colors.white.withValues(alpha: 0.15), Colors.black.withValues(alpha: 0.2)]
-            : [Colors.white, Colors.black.withValues(alpha: 0.1)],
-      ).createShader(Rect.fromCircle(center: center, radius: outerRadius))
+            ? [Colors.white.withValues(alpha: 0.08), Colors.black.withValues(alpha: 0.3)]
+            : [Colors.white.withValues(alpha: 0.9), Colors.black.withValues(alpha: 0.05)],
+      ).createShader(Rect.fromCircle(center: center, radius: innerRadius))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, outerRadius - 1, borderPaint);
+      ..strokeWidth = 2.5;
+    canvas.drawCircle(center, innerRadius, innerBezel);
 
-    // ── Inner track glow ───────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 4: Track ring (where numbers sit)
+    // ═══════════════════════════════════════════════════════════════
     final trackPaint = Paint()
-      ..color = isDark ? Colors.black.withValues(alpha: 0.2) : Colors.black.withValues(alpha: 0.03)
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: isDark
+            ? [Colors.white.withValues(alpha: 0.04), Colors.white.withValues(alpha: 0.01)]
+            : [Colors.black.withValues(alpha: 0.04), Colors.black.withValues(alpha: 0.02)],
+      ).createShader(Rect.fromCircle(center: center, radius: numberRadius))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4;
+      ..strokeWidth = numberCircleRadius * 2.6;
     canvas.drawCircle(center, numberRadius, trackPaint);
 
-    // ── Finger stop indicator ──────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 5: Finger stop indicator
+    // ═══════════════════════════════════════════════════════════════
     final stopAngle = -pi / 2 - pi / 10;
     final stopPos = Offset(
       center.dx + (outerRadius * 0.88) * cos(stopAngle),
       center.dy + (outerRadius * 0.88) * sin(stopAngle),
     );
+
+    // Glow behind stop
+    final stopGlow = Paint()
+      ..color = (isDark ? const Color(0xFF8B8EFF) : const Color(0xFF5C5FE0))
+          .withValues(alpha: 0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(stopPos, numberCircleRadius * 0.5, stopGlow);
+
     final stopPaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          (isDark ? const Color(0xFF9BA2FF) : const Color(0xFF4A4E69)),
-          (isDark ? const Color(0xFF6C73FF) : const Color(0xFF2D3139)),
+          isDark ? const Color(0xFFA0A3FF) : const Color(0xFF6B6EE8),
+          isDark ? const Color(0xFF6C73FF) : const Color(0xFF4245B0),
         ],
-      ).createShader(Rect.fromCircle(center: stopPos, radius: numberCircleRadius * 0.4))
-      ..style = PaintingStyle.fill;
+      ).createShader(Rect.fromCircle(center: stopPos, radius: numberCircleRadius * 0.4));
     canvas.drawCircle(stopPos, numberCircleRadius * 0.35, stopPaint);
 
-    // ── Number circles ─────────────────────────────────────────
+    // Stop highlight dot
+    final stopShine = Paint()
+      ..color = Colors.white.withValues(alpha: 0.5);
+    canvas.drawCircle(
+      stopPos + const Offset(-1.5, -1.5),
+      numberCircleRadius * 0.1,
+      stopShine,
+    );
+
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 6: Number circles (3D buttons)
+    // ═══════════════════════════════════════════════════════════════
     for (int i = 0; i < 10; i++) {
       int number = numberOrder[i];
       double baseAngle = (2 * pi / 10) * i - pi / 2;
@@ -320,71 +379,128 @@ class _DialPainter extends CustomPainter {
 
       double effectiveRadius = numberCircleRadius * scale;
 
-      // Number circle shadow
-      final numShadowPaint = Paint()
-        ..color = Colors.black.withValues(alpha: isDark ? 0.4 : 0.15)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-      canvas.drawCircle(numPos + const Offset(2, 3), effectiveRadius, numShadowPaint);
+      // ── Deep shadow beneath button ──
+      final btnDeepShadow = Paint()
+        ..color = Colors.black.withValues(alpha: isDark ? 0.5 : 0.2)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      canvas.drawCircle(numPos + const Offset(2, 4), effectiveRadius, btnDeepShadow);
 
-      // Number circle fill (Glossy/Metallic)
-      final numCirclePaint = Paint()
+      // ── Ambient occlusion (dark ring) ──
+      final aoShadow = Paint()
+        ..color = Colors.black.withValues(alpha: isDark ? 0.25 : 0.08)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+      canvas.drawCircle(numPos + const Offset(0, 1), effectiveRadius + 1, aoShadow);
+
+      // ── Button base fill (3D gradient) ──
+      final btnBase = Paint()
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isHighlighted
               ? [
-                  isDark ? const Color(0xFF9BA2FF) : const Color(0xFF4A4E69),
-                  isDark ? const Color(0xFF6C73FF) : const Color(0xFF2D3139),
+                  isDark ? const Color(0xFF9598FF) : const Color(0xFF7072E8),
+                  isDark ? const Color(0xFF6568E8) : const Color(0xFF4A4DC0),
                 ]
               : [
-                  isDark ? const Color(0xFF2C2F36) : const Color(0xFFFFFFFF),
-                  isDark ? const Color(0xFF1A1C21) : const Color(0xFFE2E4EB),
+                  isDark ? const Color(0xFF2C2F48) : const Color(0xFFFFFFFF),
+                  isDark ? const Color(0xFF1A1D32) : const Color(0xFFE0E2EE),
                 ],
-        ).createShader(Rect.fromCircle(center: numPos, radius: effectiveRadius))
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(numPos, effectiveRadius, numCirclePaint);
+        ).createShader(Rect.fromCircle(center: numPos, radius: effectiveRadius));
+      canvas.drawCircle(numPos, effectiveRadius, btnBase);
 
-      // Glossy highlight (inner sheen)
-      final sheenPaint = Paint()
+      // ── Top half highlight (3D dome effect) ──
+      canvas.save();
+      canvas.clipRect(Rect.fromCenter(
+        center: numPos - Offset(0, effectiveRadius * 0.15),
+        width: effectiveRadius * 2,
+        height: effectiveRadius * 1.2,
+      ));
+      final domeHighlight = Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.3, -0.6),
+          radius: 1.0,
+          colors: [
+            Colors.white.withValues(alpha: isHighlighted
+                ? 0.35
+                : (isDark ? 0.12 : 0.7)),
+            Colors.white.withValues(alpha: 0.0),
+          ],
+        ).createShader(Rect.fromCircle(center: numPos, radius: effectiveRadius));
+      canvas.drawCircle(numPos, effectiveRadius, domeHighlight);
+      canvas.restore();
+
+      // ── Rim light (bottom edge reflection) ──
+      final rimArc = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [
+            Colors.white.withValues(alpha: isDark ? 0.06 : 0.15),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: numPos, radius: effectiveRadius))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawArc(
+        Rect.fromCircle(center: numPos, radius: effectiveRadius - 0.5),
+        pi * 0.15,
+        pi * 0.7,
+        false,
+        rimArc,
+      );
+
+      // ── Outer border (crisp edge) ──
+      final btnBorder = Paint()
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withValues(alpha: isDark ? 0.1 : 0.6),
-            Colors.white.withValues(alpha: 0.0),
-          ],
+          colors: isHighlighted
+              ? [
+                  Colors.white.withValues(alpha: 0.5),
+                  Colors.white.withValues(alpha: 0.15),
+                ]
+              : [
+                  Colors.white.withValues(alpha: isDark ? 0.1 : 0.5),
+                  Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
+                ],
         ).createShader(Rect.fromCircle(center: numPos, radius: effectiveRadius))
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(numPos, effectiveRadius, sheenPaint);
-
-      // Number circle border
-      final numBorderPaint = Paint()
-        ..color = isHighlighted
-            ? Colors.white.withValues(alpha: 0.4)
-            : Colors.black.withValues(alpha: 0.1)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5;
-      canvas.drawCircle(numPos, effectiveRadius, numBorderPaint);
+        ..strokeWidth = 1.2;
+      canvas.drawCircle(numPos, effectiveRadius, btnBorder);
 
-      // Number text
+      // ── Highlight glow ──
+      if (isHighlighted) {
+        final glowPaint = Paint()
+          ..color = (isDark ? const Color(0xFF8B8EFF) : const Color(0xFF5C5FE0))
+              .withValues(alpha: 0.35)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+        canvas.drawCircle(numPos, effectiveRadius + 3, glowPaint);
+      }
+
+      // ── Number text ──
       final textPainter = TextPainter(
         text: TextSpan(
           text: number.toString(),
           style: TextStyle(
             color: isHighlighted
                 ? Colors.white
-                : (isDark ? const Color(0xFFF0F2F5) : const Color(0xFF1A1C2E)),
+                : (isDark ? const Color(0xFFD5D8F0) : const Color(0xFF2A2D4E)),
             fontSize: effectiveRadius * 0.95,
             fontWeight: FontWeight.w700,
-            shadows: isHighlighted
-                ? [
-                    const Shadow(
-                      color: Colors.black26,
-                      offset: Offset(0, 1),
-                      blurRadius: 2,
-                    )
-                  ]
-                : null,
+            shadows: [
+              if (isHighlighted)
+                const Shadow(
+                  color: Colors.black26,
+                  offset: Offset(0, 1),
+                  blurRadius: 2,
+                ),
+              // Subtle text shadow for depth
+              Shadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                offset: const Offset(0, 1),
+                blurRadius: 1,
+              ),
+            ],
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -399,46 +515,82 @@ class _DialPainter extends CustomPainter {
       );
     }
 
-    // ── Center hub (Glassmorphism effect) ──────────────────────
-    // Hub shadow
-    final hubShadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: isDark ? 0.5 : 0.1)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-    canvas.drawCircle(center + const Offset(3, 4), centerHubRadius, hubShadowPaint);
+    // ═══════════════════════════════════════════════════════════════
+    // LAYER 7: Center hub (3D metal knob)
+    // ═══════════════════════════════════════════════════════════════
+    
+    // Hub deep shadow
+    final hubDeepShadow = Paint()
+      ..color = Colors.black.withValues(alpha: isDark ? 0.6 : 0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+    canvas.drawCircle(center + const Offset(3, 5), centerHubRadius, hubDeepShadow);
 
-    // Hub glass fill
-    final hubPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+    // Hub base (metallic gradient)
+    final hubBase = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.3, -0.4),
+        radius: 1.2,
+        colors: isDark
+            ? [const Color(0xFF252845), const Color(0xFF181A30), const Color(0xFF101225)]
+            : [const Color(0xFFF5F5FF), const Color(0xFFE0E2F0), const Color(0xFFD0D2E2)],
+        stops: const [0.0, 0.6, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: centerHubRadius));
+    canvas.drawCircle(center, centerHubRadius, hubBase);
+
+    // Hub top shine (dome highlight)
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(
+      center.dx - centerHubRadius,
+      center.dy - centerHubRadius,
+      centerHubRadius * 2,
+      centerHubRadius * 1.1,
+    ));
+    final hubShine = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(-0.2, -0.7),
+        radius: 0.9,
         colors: [
-          Colors.white.withValues(alpha: isDark ? 0.08 : 0.4),
-          Colors.white.withValues(alpha: isDark ? 0.02 : 0.1),
+          Colors.white.withValues(alpha: isDark ? 0.15 : 0.6),
+          Colors.white.withValues(alpha: 0.0),
         ],
-      ).createShader(Rect.fromCircle(center: center, radius: centerHubRadius))
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, centerHubRadius, hubPaint);
+      ).createShader(Rect.fromCircle(center: center, radius: centerHubRadius));
+    canvas.drawCircle(center, centerHubRadius, hubShine);
+    canvas.restore();
 
-    // Hub border (Metallic)
-    final hubBorderPaint = Paint()
+    // Hub metallic border ring
+    final hubRing = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Colors.white.withValues(alpha: 0.3),
-          Colors.black.withValues(alpha: 0.1),
+          Colors.white.withValues(alpha: isDark ? 0.2 : 0.7),
+          Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
         ],
       ).createShader(Rect.fromCircle(center: center, radius: centerHubRadius))
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, centerHubRadius, hubBorderPaint);
+      ..strokeWidth = 2.5;
+    canvas.drawCircle(center, centerHubRadius, hubRing);
 
-    // Inner hub detail (glow)
-    final hubInnerGlow = Paint()
-      ..color = (isDark ? const Color(0xFF9BA2FF) : const Color(0xFF4A4E69))
-          .withValues(alpha: 0.05)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, centerHubRadius * 0.7, hubInnerGlow);
+    // Inner accent glow ring
+    final innerGlow = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          (isDark ? const Color(0xFF8B8EFF) : const Color(0xFF5C5FE0))
+              .withValues(alpha: 0.12),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: centerHubRadius * 0.7));
+    canvas.drawCircle(center, centerHubRadius * 0.65, innerGlow);
+
+    // Tiny center dot (like a real dial)
+    final centerDot = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          isDark ? const Color(0xFF8B8EFF) : const Color(0xFF5C5FE0),
+          isDark ? const Color(0xFF4548A0) : const Color(0xFF3A3D80),
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: centerHubRadius * 0.15));
+    canvas.drawCircle(center, centerHubRadius * 0.12, centerDot);
   }
 
   @override
