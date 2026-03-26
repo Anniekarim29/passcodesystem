@@ -13,6 +13,13 @@ A beautiful and interactive rotary-style passcode input application built with F
 
 <img src="lib/assets/iPhone-14-Plus-localhost%20(1).png" width="300" alt="App Screenshot">
 
+## Tech Stack
+
+- **Flutter**: UI toolkit for building modern applications.
+- **Dart**: Programming language used to code Flutter apps.
+- **Provider**: State management solution.
+- **Google Fonts**: Custom typography.
+
 ## Getting Started
 
 1. Clone the repository.
